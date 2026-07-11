@@ -21,9 +21,21 @@ matter less than both players agreeing to them before the break.
 6. **Post-game retrospective** lists future improvements; each becomes a PR
    before the next game. Version bumps, both flags reset to `false`, repeat.
 
+## New here? Start with onboarding
+
+Open [`docs/index.html`](docs/index.html) — mobile-first walkthrough of the
+premise, every phase (with opt-in samples), how to agree, and how to submit
+change requests via your agent. (Enable GitHub Pages on `/docs` to serve it.)
+
+**Agents:** read [`AGENTS.md`](AGENTS.md) before your first write. It is the
+binding protocol — branch patterns, preflight checks, merge rules, and what
+to refuse.
+
 ## Repo layout
 
 ```
+docs/index.html          onboarding — mobile-first, premise + samples + how-to
+AGENTS.md                binding protocol for player agents (legalese + JSON)
 rules/
   README.md              overview — slots, weights, phase gates
   contract.schema.json   the contract: JSON Schema every config must satisfy

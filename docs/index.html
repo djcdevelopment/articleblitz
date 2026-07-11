@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ArticleBlitz — Round 2</title>
+<style>
+  :root {
+    --bg: #14161a;
+    --panel: #1d2026;
+    --panel-2: #23272f;
+    --ink: #e8e6e1;
+    --ink-dim: #a09c94;
+    --accent: #e0a458;
+    --accent-ink: #14161a;
+    --line: #33383f;
+    --good: #7fb069;
+    --mono: ui-monospace, SFMono-Regular, Consolas, Menlo, monospace;
+    --serif: Georgia, 'Times New Roman', serif;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f4ef;
+      --panel: #ffffff;
+      --panel-2: #efece4;
+      --ink: #23211d;
+      --ink-dim: #6b675f;
+      --accent: #8a5a14;
+      --accent-ink: #fdfcf9;
+      --line: #ddd8cd;
+      --good: #3e7a2e;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; padding: 0 1rem; }
+  a { color: var(--accent); }
+
+  /* ---- hero ---- */
+  header.hero { padding: 3rem 0 2rem; border-bottom: 1px solid var(--line); }
+  .kicker {
+    font-family: var(--mono); font-size: .75rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-dim); margin-bottom: 1rem;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 400; font-style: italic;
+    font-size: clamp(1.7rem, 6vw, 2.6rem); line-height: 1.2;
+  }
+  h1 b { color: var(--accent); font-style: normal; }
+  .hero p.lede { margin-top: 1.25rem; color: var(--ink-dim); font-size: 1.05rem; }
+  .hero p.lede strong { color: var(--ink); }
+  nav.jump { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.5rem; }
+  nav.jump a {
+    text-decoration: none; font-size: .85rem; font-family: var(--mono);
+    border: 1px solid var(--line); border-radius: 999px; padding: .4rem .8rem;
+    color: var(--ink);
+  }
+  nav.jump a:active { background: var(--panel-2); }
+
+  /* ---- sections ---- */
+  section { padding: 2.25rem 0; border-bottom: 1px solid var(--line); }
+  h2 {
+    font-size: 1.3rem; margin-bottom: .35rem;
+  }
+  h2 .n { color: var(--accent); font-family: var(--mono); font-size: 1rem; margin-right: .4rem; }
+  .sub { color: var(--ink-dim); margin-bottom: 1.25rem; }
+  p + p { margin-top: .75rem; }
+
+  /* ---- phase cards ---- */
+  .phase {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    margin-bottom: .75rem; overflow: hidden;
+  }
+  .phase > .head { display: flex; gap: .75rem; padding: .85rem 1rem .25rem; align-items: baseline; }
+  .phase .num {
+    font-family: var(--mono); color: var(--accent); font-size: .8rem; min-width: 1.6rem;
+  }
+  .phase .name { font-weight: 600; }
+  .phase .desc { padding: 0 1rem .85rem calc(1rem + 1.6rem + .75rem); color: var(--ink-dim); font-size: .92rem; }
+  details.sample { border-top: 1px dashed var(--line); }
+  details.sample summary {
+    cursor: pointer; list-style: none; padding: .6rem 1rem;
+    font-family: var(--mono); font-size: .8rem; color: var(--accent);
+    user-select: none;
+  }
+  details.sample summary::-webkit-details-marker { display: none; }
+  details.sample summary::before { content: "▸ "; }
+  details.sample[open] summary::before { content: "▾ "; }
+  details.sample .body { padding: 0 1rem 1rem; font-size: .9rem; }
+  .demo {
+    background: var(--panel-2); border-radius: 8px; padding: .75rem .9rem;
+    font-family: var(--mono); font-size: .8rem; line-height: 1.6;
+    overflow-x: auto; white-space: pre; color: var(--ink);
+  }
+  .demo .c { color: var(--ink-dim); }
+  .demo .a { color: var(--accent); }
+  .demo .g { color: var(--good); }
+  .note { font-size: .85rem; color: var(--ink-dim); margin-top: .5rem; }
+
+  /* ---- copy blocks ---- */
+  .say {
+    position: relative; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 10px; padding: .9rem 1rem 1rem; margin: .75rem 0;
+  }
+  .say .label {
+    font-family: var(--mono); font-size: .7rem; text-transform: uppercase;
+    letter-spacing: .1em; color: var(--ink-dim); margin-bottom: .5rem;
+  }
+  .say pre {
+    font-family: var(--mono); font-size: .82rem; white-space: pre-wrap;
+    word-break: break-word; line-height: 1.55;
+  }
+  .say button.copy {
+    position: absolute; top: .6rem; right: .6rem;
+    font: .72rem var(--mono); padding: .35rem .7rem; border-radius: 7px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+    cursor: pointer; min-height: 32px;
+  }
+  .say button.copy:active { background: var(--accent); color: var(--accent-ink); }
+
+  /* ---- handshake steps ---- */
+  ol.steps { padding-left: 1.2rem; }
+  ol.steps li { margin: .6rem 0; }
+  ol.steps li::marker { color: var(--accent); font-family: var(--mono); }
+
+  /* ---- fine print ---- */
+  .clauses { counter-reset: clause; padding-left: 0; list-style: none; }
+  .clauses li {
+    counter-increment: clause; padding: .55rem 0 .55rem 2.4rem; position: relative;
+    border-bottom: 1px dashed var(--line); font-size: .92rem;
+  }
+  .clauses li::before {
+    content: "§" counter(clause); position: absolute; left: 0; top: .55rem;
+    font-family: var(--mono); color: var(--accent); font-size: .85rem;
+  }
+  footer { padding: 2rem 0 3.5rem; color: var(--ink-dim); font-size: .85rem; }
+  footer .v { font-family: var(--mono); }
+
+  /* ---- desktop ---- */
+  @media (min-width: 900px) {
+    .wrap { max-width: 860px; }
+    .phases-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; align-items: start; }
+    .phase { margin-bottom: 0; }
+    header.hero { padding-top: 4.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header class="hero">
+  <p class="kicker">djm × durracktu · a game of incomplete information</p>
+  <h1>“Round&nbsp;2, a round of <b>Article&nbsp;Blitz</b>, you&nbsp;say?”</h1>
+  <p class="lede">Pull up a stool. The objective is not to write the best prompt —
+  <strong>the objective is to build the strongest overall strategy.</strong>
+  You'll ban, bet, budget, buy information, execute blind, face a jury, and
+  maybe burn a challenge token or two. Every decision carries opportunity cost.
+  Like billiards in a random poolhall: the rules matter less than both players
+  agreeing to them before the break.</p>
+  <nav class="jump">
+    <a href="#premise">premise</a>
+    <a href="#play">how to play</a>
+    <a href="#agree">how to agree</a>
+    <a href="#modify">change the rules</a>
+    <a href="#fineprint">fine print</a>
+  </nav>
+</header>
+
+<section id="premise">
+  <h2>The premise</h2>
+  <p class="sub">Incomplete information, on purpose.</p>
+  <p>Eight execution configurations enter — models, reasoning depths, context
+  windows, budgets. You know enough to form a strategy, never enough to
+  perfectly optimize. Bans prune the pool, bets record what you believe,
+  a lottery assigns what you actually get, and a prompt budget makes every
+  word cost something. Your prompts run; a blind jury of models that never
+  review themselves scores the outputs; scarce appeals let a human push back.</p>
+  <p>Then the final report replays the whole game: <em>if you had banned that
+  model instead… if you had spent 80% of your budget there… if you had bought
+  the rubric before writing…</em> Rather than producing a single winner, it
+  produces a complete game record.</p>
+</section>
+
+<section id="play">
+  <h2><span class="n">I.</span>How to play</h2>
+  <p class="sub">Twelve phases, each with a gate. Tap <b style="font-family:var(--mono);font-size:.85em">▸ sample</b> on any phase to see a demo — that's opt-in, skip what's obvious.</p>
+
+  <div class="phases-grid">
+
+  <div class="phase">
+    <div class="head"><span class="num">0</span><span class="name">Draft</span></div>
+    <p class="desc">Both players suggest what belongs in the candidate pool: models, reasoning depths, context sizes, constraints, evidence sources.</p>
+    <details class="sample"><summary>sample</summary><div class="body">
+<div class="demo"><span class="c"># djm suggests</span>
++ claude-haiku-4-5 · low effort · 200K ctx
++ claude-opus-4-8 · xhigh · repo access
+<span class="c"># durracktu suggests</span>
++ claude-sonnet-5 · high · no web access
++ claude-sonnet-5 · low · 3 evidence repos
+<span class="g">gate ✓ both suggestion lists submitted</span></div>
+    </div></details>
+  </div>
+
+  <div class="phase">
+    <div class="head"><span class="num">1</span><span class="name">Preference calibration</span></div>
+    <p class="desc">A timed blind exercise builds your player profile — without revealing how it will bite you later.</p>
+    <details class="sample"><summary>sample</summary><div class="body">
+<div class="demo"><span class="c"># 90 seconds, no edits:</span>
+Q: cut one: citations or runtime?
+A(djm): runtime
+<span class="c"># produces →</span>
+profile: { risk: 0.7, info_value: 0.4,
+           speed_over_rigor: true }</div>
+<p class="note">The profile feeds the final report — decision speed, risk tolerance, consistency.</p>
+    </div></details>
+  </div>
+
+  <div class="phase">
+    <div class="head"><span class="num">2</span><span class="name">Candidate pool</span></div>
+    <p class="desc">The 8 configurations are published. You know the pool — not the final assignments.</p>
+    <details class="sample"><summary>sample</summary><div class="body">
+<div class="demo">#1 haiku·low    #2 sonnet·low   #3 sonnet·high
+#4 sonnet·xhigh #5 opus·high    #6 opus·xhigh
+#7 haiku·high   #8 sonnet·high+repos</div>
+    </div></details>
+  </div>
+
+  <div class="phase">
+    <div class="head"><span class="num">3</span><span class="name">Ban phase</span></div>
+    <p class="desc">Exactly like drafting in competitive games: alternating bans, each permanently removing a configuration, until the finalists remain.</p>
+    <details class="sample"><summary>sample</summary><div class="body">
+<div class="demo">djm       bans <span class="a">#1 haiku·low</span>
+durracktu bans <span class="a">#6 opus·xhigh</span>
+djm       bans <span class="a">#7 haiku·high</span>
+<span class="g">gate ✓ 5 remain → the bans become telemetry</span></div>
+<p class="note">What you ban says as much about your strategy as what you keep.</p>
+    </div></details>
+  </div>
+
+  <div class="phase">
+    <div class="head"><span class="num">4</span><span class="name">Betting phase</span></div>
+    <p class="desc">Strategic questions, answered on record. Your priors get compared against actual outcomes later.</p>
+    <details class="sample"><summary>sample</summary><div class="body">
+<div class="demo">Q: strongest remaining config?
+djm: #5          durracktu: #8
+Q: most likely to surprise you?
+djm: #2          durracktu: #2
+Q: which would you least like
+   your opponent to receive?
+djm: #8          durracktu: #5</div>
+    </div></details>
+  </div>
+
+  <div class="phase">
+    <div class="head"><span class="num">5</span><span class="name">Assignment lottery</span></div>
+    <p class="desc">Code — not a model, not a human — assigns configurations by the agreed method.</p>
+    <details class="sample"><summary>sample</summary><div class="body">
+<div class="demo">method: fully_random  seed: 8842
+djm       ← #2, #5, #8
+durracktu ← #3, #4</div>
+<p class="note">Contract-legal alternatives: snake_draft, weighted_lottery, auction, hidden_until_execution.</p>
+    </div></details>
+  </div>
+
+  <div class="phase">
+    <div class="head"><span class="num">6</span><span class="name">Prompt budget</span></div>
+    <p class="desc">Not "three prompts" — 100 points, spent however you want. Larger prompts consume more budget and leave fewer opportunities.</p>
+    <details class="sample"><summary>sample</summary><div class="body">
+<div class="demo">djm:       50 / 30 / 20
+durracktu: 34 / 33 / 33
+<span class="c"># or go all-in: 100 / 0 / 0</span></div>
+    </div></details>
+  </div>
+
+  <div class="phase">
+    <div class="head"><span class="num">7</span><span class="name">Information purchases</span></div>
+    <p class="desc">Optionally spend budget to reveal information before committing. Every reveal reduces prompt budget — information becomes currency.</p>
+    <details class="sample"><summary>sample</summary><div class="body">
+<div class="demo"><span class="c"># catalog (points)</span>
+context_size 10 · temperature 10
+model_family 25 · reasoning_depth 15
+repository_count 10 · <span class="a">evaluation_rubric 30</span>
+
+djm buys reasoning_depth (−15) → 85 left</div>
+<p class="note">The rubric costs 3× a context peek. Knowing how you'll be judged is expensive on purpose.</p>
+    </div></details>
+  </div>
+
+  <div class="phase">
+    <div class="head"><span class="num">8</span><span class="name">Execution</span></div>
+    <p class="desc">Prompts run. Every execution produces output, evidence, citations, cost, runtime, token usage, confidence, and intermediate artifacts.</p>
+    <details class="sample"><summary>sample</summary><div class="body">
+<div class="demo">run #5-p1  (opus·high)
+tokens: 14,208   cost: $0.42
+runtime: 3m 12s  confidence: 0.81
+artifacts: draft.md, evidence.json</div>
+    </div></details>
+  </div>
+
+  <div class="phase">
+    <div class="head"><span class="num">9</span><span class="name">Blind jury</span></div>
+    <p class="desc">No model evaluates itself. Each output is scored by a panel of other models against weighted dimensions — overlapping review graphs, not simple pairs.</p>
+    <details class="sample"><summary>sample</summary><div class="body">
+<div class="demo">output #5-p1 → reviewers R1 R2 R3
+                       R1   R2   R3
+output_quality (.35)   8    7    3 ←
+evidence       (.20)   7    7    6
+cost_eff       (.15)   6    5    5
+<span class="a">spread ≥ 3 on quality → adjudicator</span>
+<span class="g">adjudicated: 7 · weighted total 6.6</span></div>
+    </div></details>
+  </div>
+
+  <div class="phase">
+    <div class="head"><span class="num">10</span><span class="name">Human appeals</span></div>
+    <p class="desc">After seeing all outputs, each player gets a few challenge tokens. Appeals are scarce by design.</p>
+    <details class="sample"><summary>sample</summary><div class="body">
+<div class="demo">tokens: 3 each. spend one to…
+· appeal one review
+· request an additional reviewer
+· rerun a prompt (same model, exactly)
+· submit additional evidence
+· <span class="a">cross-examine a reviewer's reasoning</span>
+
+djm spends 1: cross-examine R3 on #5-p1</div>
+    </div></details>
+  </div>
+
+  <div class="phase">
+    <div class="head"><span class="num">11</span><span class="name">Final report</span></div>
+    <p class="desc">Not a single winner — a complete game record: your profile, your strategy, the review network, and a replayable tournament.</p>
+    <details class="sample"><summary>sample</summary><div class="body">
+<div class="demo"><span class="c"># counterfactual replay</span>
+"If you had banned #8 instead of #7,
+ durracktu's strongest line dies in
+ phase 3 and your budget split holds."
+<span class="c"># then → RETROSPECTIVE.md</span></div>
+    </div></details>
+  </div>
+
+  <div class="phase">
+    <div class="head"><span class="num">★</span><span class="name">House rule</span></div>
+    <p class="desc">Anything deterministic — the lottery, the budget math, the reveals — is code, never a model. Models play and judge; they don't keep the books.</p>
+  </div>
+
+  </div><!-- /phases-grid -->
+</section>
+
+<section id="agree">
+  <h2><span class="n">II.</span>How to agree</h2>
+  <p class="sub">The gentlemen's handshake, in JSON.</p>
+  <ol class="steps">
+    <li>Read the rules: <code>rules/game.config.json</code> holds the game,
+        <code>rules/contract.schema.json</code> holds the shape it must satisfy.</li>
+    <li>When you're satisfied, flip <b>your own</b> flag in
+        <code>rules/ratification.json</code> — via a pull request the other
+        player approves. You can never flip theirs.</li>
+    <li>When both flags are <code>true</code>, the commit is tagged
+        <code>game-&lt;n&gt;-locked</code>. <b>“Ready to play” is set by both —
+        and no more rule changes are allowed this game.</b></li>
+    <li>Mid-game ideas go to <code>RETROSPECTIVE.md</code>, not the config.
+        After the report, retro items become next game's change requests.</li>
+  </ol>
+
+  <div class="say">
+    <div class="label">tell your agent — ratify</div>
+    <button class="copy" data-copy>copy</button>
+    <pre>Read AGENTS.md in https://github.com/djcdevelopment/articleblitz.git and follow it. On branch ratify/&lt;my-handle&gt;, set ready_to_play.&lt;my-handle&gt; to true in rules/ratification.json — change nothing else in the repo. Open a PR to main titled "Ratify v0.3: &lt;my-handle&gt; ready to play" and stop. Do not merge it yourself.</pre>
+  </div>
+</section>
+
+<section id="modify">
+  <h2><span class="n">III.</span>How to suggest / modify</h2>
+  <p class="sub">Change requests are submitted by your agent. Approved by the other player. Always.</p>
+  <p>Every rule is a line in a JSON file, so every suggestion is a tiny diff:
+  swap a jury seat, reprice the rubric, legalize Fable in the pool, add an
+  add-on slot like <code>devils_advocate</code>. Branch → PR → the <em>other</em>
+  player approves → merged. No self-merges, ever. The schema is the referee:
+  if your change doesn't validate, it isn't a legal move.</p>
+
+  <div class="say">
+    <div class="label">tell your agent — change request</div>
+    <button class="copy" data-copy>copy</button>
+    <pre>Read AGENTS.md in https://github.com/djcdevelopment/articleblitz.git and follow it. On branch cr/&lt;my-handle&gt;/&lt;short-topic&gt;, edit rules/game.config.json to &lt;describe the change, e.g. "set pool.fable_legal to true" or "replace one jury_panel seat with claude-opus-4-8 at effort high"&gt;. Before opening the PR verify: all JSON parses, game.config.json validates against rules/contract.schema.json, and every weights group sums to 1.0. Do not touch ratification.json. Open a PR to main titled "CR: &lt;what changed&gt;" explaining the why in one paragraph, then stop — the other player merges.</pre>
+  </div>
+
+  <div class="say">
+    <div class="label">tell your agent — review the other player's CR</div>
+    <button class="copy" data-copy>copy</button>
+    <pre>Read AGENTS.md in https://github.com/djcdevelopment/articleblitz.git. Review the open PR titled "&lt;title&gt;": summarize exactly what changes and its gameplay consequences for me, verify schema validity and weight sums, flag anything touching my ready_to_play flag or a locked config. Give me a recommendation — I decide, then you approve or request changes on my behalf.</pre>
+  </div>
+
+  <p class="note">Extending works the same way: new slots, new weight groups,
+  new phases are all just bigger diffs under the same contract.</p>
+</section>
+
+<section id="fineprint">
+  <h2><span class="n">IV.</span>The fine print</h2>
+  <p class="sub">The agent-readable version. Canonical copy lives in
+  <a href="https://github.com/djcdevelopment/articleblitz/blob/main/AGENTS.md">AGENTS.md</a>;
+  machine-readable protocol block at its end. JSON beats prose wherever they disagree.</p>
+  <ol class="clauses">
+    <li><b>Agency.</b> An agent acts for exactly one player and identifies that player in every branch name and PR.</li>
+    <li><b>Authority.</b> <code>rules/*.json</code> is authoritative. README, this page, and all prose are explanatory only.</li>
+    <li><b>Change requests.</b> Branch <code>cr/&lt;player&gt;/&lt;topic&gt;</code>; must validate against the contract schema; weights sum to 1.0; merged only with the other player's approval; no self-merges; no force-pushes to main.</li>
+    <li><b>Ratification.</b> An agent may flip only its own player's <code>ready_to_play</code> flag. Flipping the other player's flag is void, not merely rude.</li>
+    <li><b>Lock.</b> Both flags true → tag <code>game-&lt;n&gt;-locked</code>. While locked, agents must refuse rule-change CRs and redirect proposals to <code>RETROSPECTIVE.md</code>.</li>
+    <li><b>Determinism.</b> The lottery, budget accounting, and information reveals are executed by code. An agent must never substitute a model for them.</li>
+    <li><b>Blindness.</b> No model reviews output it produced. A jury seat matching the executing model is substituted per config.</li>
+    <li><b>Retrospective.</b> Post-game, retro items may become CRs; the version bumps; both flags reset to false; play again.</li>
+  </ol>
+</section>
+
+<footer>
+  <p><span class="v">rules v0.3 · draft · unratified</span> —
+  <a href="https://github.com/djcdevelopment/articleblitz">djcdevelopment/articleblitz</a></p>
+  <p style="margin-top:.5rem">Rack 'em.</p>
+</footer>
+
+</div><!-- /wrap -->
+
+<script>
+document.querySelectorAll('button[data-copy]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var text = btn.parentElement.querySelector('pre').innerText;
+    function done(ok) {
+      btn.textContent = ok ? 'copied ✓' : 'select + copy';
+      setTimeout(function () { btn.textContent = 'copy'; }, 1600);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function(){done(true)}, function(){done(false)});
+    } else {
+      var r = document.createRange();
+      r.selectNodeContents(btn.parentElement.querySelector('pre'));
+      var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+      done(document.execCommand && document.execCommand('copy'));
+      s.removeAllRanges();
+    }
+  });
+});
+</script>
+
+</body>
+</html>
