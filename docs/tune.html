@@ -1,0 +1,953 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ArticleBlitz — Rules Board</title>
+<style>
+  :root {
+    --bg: #14161a;
+    --panel: #1d2026;
+    --panel-2: #23272f;
+    --panel-3: #2a2f38;
+    --ink: #e8e6e1;
+    --ink-dim: #a09c94;
+    --ink-faint: #6f6c65;
+    --accent: #e0a458;
+    --accent-ink: #14161a;
+    --line: #33383f;
+    --good: #7fb069;
+    --bad: #e0685c;
+    --mono: ui-monospace, SFMono-Regular, Consolas, Menlo, monospace;
+    --serif: Georgia, 'Times New Roman', serif;
+  }
+  :root[data-theme="light"], :root:not([data-theme="dark"]) {
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f6f4ef;
+      --panel: #ffffff;
+      --panel-2: #efece4;
+      --panel-3: #e6e2d8;
+      --ink: #23211d;
+      --ink-dim: #6b675f;
+      --ink-faint: #97928a;
+      --accent: #a2661a;
+      --accent-ink: #fdfcf9;
+      --line: #ddd8cd;
+      --good: #3e7a2e;
+      --bad: #b23b30;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f4ef;
+    --panel: #ffffff;
+    --panel-2: #efece4;
+    --panel-3: #e6e2d8;
+    --ink: #23211d;
+    --ink-dim: #6b675f;
+    --ink-faint: #97928a;
+    --accent: #a2661a;
+    --accent-ink: #fdfcf9;
+    --line: #ddd8cd;
+    --good: #3e7a2e;
+    --bad: #b23b30;
+  }
+
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 1rem 5rem; }
+
+  /* ---- top bar ---- */
+  header.top {
+    position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
+    padding: .7rem 1rem; margin: 0 -1rem 1.25rem;
+  }
+  .top-inner { max-width: 1040px; margin: 0 auto; display: flex; align-items: center; gap: .9rem; flex-wrap: wrap; }
+  .brand { font-family: var(--serif); font-style: italic; font-size: 1.15rem; }
+  .brand b { color: var(--accent); font-style: normal; }
+  .brand .v { font-family: var(--mono); font-style: normal; font-size: .7rem; color: var(--ink-dim); margin-left: .5rem; }
+  .top-spacer { flex: 1 1 auto; }
+  .status {
+    font-family: var(--mono); font-size: .74rem; padding: .32rem .7rem; border-radius: 999px;
+    border: 1px solid var(--line); display: inline-flex; align-items: center; gap: .4rem; white-space: nowrap;
+  }
+  .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); }
+  .status.invalid { border-color: color-mix(in srgb, var(--bad) 55%, var(--line)); color: var(--bad); }
+  .status.invalid .dot { background: var(--bad); }
+  .status.dirty { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); color: var(--accent); }
+  .status.dirty .dot { background: var(--accent); }
+  .iconbtn {
+    font: .72rem var(--mono); color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; padding: .4rem .6rem; cursor: pointer; min-height: 34px;
+  }
+  .iconbtn:hover { border-color: var(--accent); }
+  .iconbtn:active { background: var(--panel-2); }
+
+  /* ---- layout ---- */
+  .lede { color: var(--ink-dim); font-size: .95rem; max-width: 62ch; margin-bottom: 1.4rem; }
+  .lede b { color: var(--ink); }
+  .board { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+  @media (min-width: 880px) { .board { grid-template-columns: 1fr 1fr; } .board .col-wide { grid-column: 1 / -1; } }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 1rem 1.1rem 1.15rem; }
+  .card > h2 {
+    font-size: .82rem; font-family: var(--mono); text-transform: uppercase; letter-spacing: .1em;
+    color: var(--ink-dim); margin-bottom: .2rem; display: flex; align-items: baseline; gap: .5rem;
+  }
+  .card > h2 .path { color: var(--ink-faint); font-size: .68rem; text-transform: none; letter-spacing: 0; }
+  .card > .hint { color: var(--ink-faint); font-size: .8rem; margin: .1rem 0 .9rem; }
+
+  /* ---- generic control row ---- */
+  .row { display: flex; align-items: center; gap: .75rem; padding: .5rem 0; border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+  .row:first-of-type { border-top: 0; }
+  .row .lab { flex: 1 1 auto; min-width: 0; }
+  .row .lab .name { font-size: .9rem; }
+  .row .lab .sub { font-size: .72rem; color: var(--ink-faint); font-family: var(--mono); }
+  .row .ctl { flex: 0 0 auto; display: flex; align-items: center; gap: .5rem; }
+
+  /* ---- stepper ---- */
+  .stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--panel-2); }
+  .stepper button {
+    width: 34px; height: 38px; border: 0; background: transparent; color: var(--ink); font-size: 1.15rem;
+    cursor: pointer; font-family: var(--mono); line-height: 1; display: grid; place-items: center;
+  }
+  .stepper button:hover { background: var(--panel-3); color: var(--accent); }
+  .stepper button:active { background: var(--accent); color: var(--accent-ink); }
+  .stepper button:disabled { color: var(--ink-faint); cursor: not-allowed; background: transparent; }
+  .stepper .val {
+    min-width: 46px; text-align: center; font-family: var(--mono); font-variant-numeric: tabular-nums;
+    font-size: .95rem; padding: 0 .35rem; user-select: none;
+  }
+
+  /* ---- toggle ---- */
+  .toggle {
+    --w: 46px; --h: 26px; width: var(--w); height: var(--h); border-radius: 999px; border: 1px solid var(--line);
+    background: var(--panel-2); position: relative; cursor: pointer; transition: background .15s, border-color .15s; flex: 0 0 auto;
+  }
+  .toggle::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: calc(var(--h) - 6px); height: calc(var(--h) - 6px);
+    border-radius: 50%; background: var(--ink-dim); transition: transform .16s cubic-bezier(.34,1.56,.64,1), background .15s;
+  }
+  .toggle[aria-checked="true"] { background: color-mix(in srgb, var(--accent) 30%, var(--panel-2)); border-color: var(--accent); }
+  .toggle[aria-checked="true"]::after { transform: translateX(calc(var(--w) - var(--h))); background: var(--accent); }
+  .toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---- segmented ---- */
+  .seg { display: inline-flex; flex-wrap: wrap; gap: 3px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+  .seg button {
+    border: 0; background: transparent; color: var(--ink-dim); font: .78rem var(--mono); padding: .4rem .6rem;
+    border-radius: 7px; cursor: pointer; min-height: 32px; white-space: nowrap;
+  }
+  .seg button:hover { color: var(--ink); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+
+  /* ---- chips ---- */
+  .chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .chip {
+    font: .78rem var(--mono); padding: .4rem .6rem; border-radius: 999px; border: 1px solid var(--line);
+    background: var(--panel-2); color: var(--ink-dim); cursor: pointer; min-height: 32px;
+  }
+  .chip[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 22%, var(--panel-2)); border-color: var(--accent); color: var(--ink); }
+  .chip:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ---- select ---- */
+  select.sel {
+    font: .82rem var(--mono); color: var(--ink); background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 8px; padding: .45rem .5rem; min-height: 38px; cursor: pointer; max-width: 168px;
+  }
+  select.sel:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  /* ---- weights ---- */
+  .wrow { display: grid; grid-template-columns: 1fr; gap: .15rem; padding: .55rem 0; border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+  .wrow:first-child { border-top: 0; }
+  .wrow .wtop { display: flex; justify-content: space-between; align-items: baseline; }
+  .wrow .wname { font-size: .88rem; }
+  .wrow .wval { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: .82rem; color: var(--accent); }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 26px; background: transparent; cursor: pointer; margin: 0;
+  }
+  input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: var(--panel-3); }
+  input[type=range]::-moz-range-track { height: 6px; border-radius: 3px; background: var(--panel-3); }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent);
+    border: 3px solid var(--bg); margin-top: -7px; box-shadow: 0 0 0 1px var(--accent);
+  }
+  input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--accent); border: 3px solid var(--bg); box-shadow: 0 0 0 1px var(--accent); }
+  input[type=range]:focus-visible { outline: none; }
+  input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 60%, transparent); }
+
+  .summeter { margin-top: .7rem; }
+  .summeter .bar { position: relative; height: 10px; border-radius: 5px; background: var(--panel-3); overflow: hidden; }
+  .summeter .fill { height: 100%; width: 0; background: var(--good); transition: width .12s, background .12s; border-radius: 5px; }
+  .summeter.off .fill { background: var(--bad); }
+  .summeter .mark { position: absolute; top: -3px; bottom: -3px; left: 100%; width: 2px; background: var(--ink); opacity: .0; }
+  .summeter .read { display: flex; justify-content: space-between; align-items: baseline; margin-top: .5rem; }
+  .summeter .sum { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: .82rem; }
+  .summeter .sum.ok { color: var(--good); }
+  .summeter .sum.off { color: var(--bad); }
+
+  /* ---- model / jury rows ---- */
+  .mrow { display: flex; align-items: center; gap: .5rem; padding: .45rem 0; border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent); flex-wrap: wrap; }
+  .mrow:first-of-type { border-top: 0; }
+  .mrow .mname { flex: 1 1 120px; font-size: .86rem; }
+  .mrow .mname .sub { font-size: .68rem; color: var(--ink-faint); font-family: var(--mono); }
+  .miniseg button { padding: .32rem .42rem; font-size: .7rem; }
+  .rm {
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-dim); border-radius: 7px;
+    width: 32px; height: 32px; cursor: pointer; font-size: 1rem; line-height: 1;
+  }
+  .rm:hover { color: var(--bad); border-color: var(--bad); }
+  .addbtn {
+    margin-top: .6rem; font: .78rem var(--mono); color: var(--accent); background: transparent;
+    border: 1px dashed var(--line); border-radius: 8px; padding: .5rem .7rem; cursor: pointer; width: 100%;
+  }
+  .addbtn:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+
+  /* ---- validation & diff ---- */
+  .checklist { list-style: none; display: grid; gap: .35rem; }
+  .checklist li { font-size: .82rem; display: flex; gap: .5rem; align-items: flex-start; font-family: var(--mono); }
+  .checklist li .m { flex: 0 0 auto; }
+  .checklist li.ok { color: var(--ink-dim); }
+  .checklist li.ok .m { color: var(--good); }
+  .checklist li.err .m { color: var(--bad); }
+  .checklist li.err { color: var(--ink); }
+  .checklist li.warn .m { color: var(--accent); }
+
+  .diff { font-family: var(--mono); font-size: .78rem; display: grid; gap: .3rem; max-height: 240px; overflow-y: auto; }
+  .diff .none { color: var(--ink-faint); font-style: italic; font-family: var(--serif); }
+  .diff .d { display: grid; gap: .05rem; padding-bottom: .3rem; border-bottom: 1px dashed color-mix(in srgb, var(--line) 55%, transparent); }
+  .diff .d .p { color: var(--accent); }
+  .diff .d .ch { color: var(--ink-dim); }
+  .diff .d .ch .o { color: var(--bad); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--bad) 60%, transparent); }
+  .diff .d .ch .arrow { color: var(--ink-faint); margin: 0 .3rem; }
+  .diff .d .ch .n { color: var(--good); }
+
+  /* ---- export ---- */
+  .exportcard { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+  .field { display: flex; align-items: center; gap: .6rem; margin-bottom: .7rem; flex-wrap: wrap; }
+  .field label { font: .74rem var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--ink-dim); flex: 0 0 84px; }
+  .field input[type=text] {
+    flex: 1 1 160px; font: .85rem var(--mono); color: var(--ink); background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 8px; padding: .5rem .6rem; min-height: 38px;
+  }
+  .field input[type=text]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+  .say { position: relative; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; margin-top: .7rem; }
+  .say .lbl {
+    display: flex; justify-content: space-between; align-items: center; padding: .5rem .7rem;
+    font: .68rem var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--ink-dim); border-bottom: 1px solid var(--line);
+  }
+  .say pre {
+    font: .76rem/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; padding: .7rem;
+    max-height: 300px; overflow-y: auto; color: var(--ink);
+  }
+  .copy {
+    font: .68rem var(--mono); padding: .3rem .6rem; border-radius: 6px; border: 1px solid var(--line);
+    background: var(--panel); color: var(--ink); cursor: pointer; min-height: 28px;
+  }
+  .copy:hover { border-color: var(--accent); }
+  .copy:active { background: var(--accent); color: var(--accent-ink); }
+  .export-block[hidden] { display: none; }
+  .blocked { font-size: .82rem; color: var(--bad); font-family: var(--mono); padding: .6rem 0; }
+
+  .sync { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-bottom: .8rem; }
+  .sync textarea {
+    width: 100%; min-height: 0; height: 38px; resize: vertical; font: .74rem var(--mono); color: var(--ink);
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: .5rem .6rem;
+  }
+  .sync textarea:focus { min-height: 120px; height: 120px; }
+  details.sync-wrap { margin-bottom: 1rem; }
+  details.sync-wrap > summary { cursor: pointer; font: .76rem var(--mono); color: var(--accent); list-style: none; padding: .3rem 0; }
+  details.sync-wrap > summary::-webkit-details-marker { display: none; }
+  details.sync-wrap > summary::before { content: "▸ "; }
+  details.sync-wrap[open] > summary::before { content: "▾ "; }
+  .msg { font: .74rem var(--mono); margin-top: .4rem; }
+  .msg.ok { color: var(--good); }
+  .msg.bad { color: var(--bad); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <span class="brand">Article<b>Blitz</b> · Rules Board <span class="v" id="verTag">v0.3.0</span></span>
+    <span class="top-spacer"></span>
+    <span class="status" id="status"><span class="dot"></span><span id="statusText">in sync</span></span>
+    <button class="iconbtn" id="resetBtn" title="Discard edits, return to the loaded baseline">↺ reset</button>
+    <button class="iconbtn" id="themeBtn" title="Toggle light / dark">◐</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <p class="lede">Tap and drag the knobs. The board tracks every change against the loaded
+  <b>game.config.json</b>, checks it against the contract like the schema referee would, and hands you a
+  <b>change request</b> that carries the exact resulting file — so your agent just writes it, validates, and opens the PR.
+  JSON stays the source of truth; this is only a nicer pair of hands.</p>
+
+  <details class="sync-wrap">
+    <summary>Sync with the repo — load the live config or paste the current file</summary>
+    <div class="sync">
+      <button class="iconbtn" id="fetchBtn">⟲ Load latest from GitHub</button>
+      <span class="msg" id="syncMsg"></span>
+    </div>
+    <textarea id="pasteBox" placeholder="…or paste the current rules/game.config.json here to re-baseline against it, then press Apply"></textarea>
+    <div class="sync" style="margin-top:.5rem">
+      <button class="iconbtn" id="applyBtn">Apply pasted config as baseline</button>
+    </div>
+  </details>
+
+  <div class="board" id="board">
+
+    <div class="card col-wide">
+      <h2>Jury weights <span class="path">weights.jury</span></h2>
+      <p class="hint">How the blind jury scores each output. Must sum to exactly 1.00 — drag one and watch the rest.</p>
+      <div id="weights"></div>
+      <div class="summeter" id="summeter">
+        <div class="bar"><div class="fill" id="sumFill"></div><div class="mark"></div></div>
+        <div class="read">
+          <span class="sum" id="sumRead">Σ 1.00</span>
+          <button class="iconbtn" id="normBtn">normalize → 1.00</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>The pool <span class="path">models.pool</span></h2>
+      <p class="hint">The game pieces. Cost tiers are scored, so tier spread is the game.</p>
+      <div id="pool"></div>
+    </div>
+
+    <div class="card">
+      <h2>Match params <span class="path">params</span></h2>
+      <p class="hint">Sizes, orders, and the shape of each phase.</p>
+      <div id="params"></div>
+    </div>
+
+    <div class="card">
+      <h2>Information market <span class="path">params.information_purchases</span></h2>
+      <p class="hint">Price in budget points to reveal a fact before committing.</p>
+      <div id="market"></div>
+    </div>
+
+    <div class="card">
+      <h2>Adjudication <span class="path">params.adjudication_trigger</span></h2>
+      <p class="hint">When a jury disagreement escalates to the adjudicator.</p>
+      <div id="adjud"></div>
+    </div>
+
+    <div class="card col-wide">
+      <h2>Harness slots <span class="path">models.harness</span></h2>
+      <p class="hint">Infrastructure models — invisible to scoring. No jury seat may match the model whose output it reviews.</p>
+      <div class="board" style="gap:.9rem">
+        <div>
+          <div style="font:.74rem var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim);margin-bottom:.3rem">jury panel <span style="color:var(--ink-faint)">· min 2 seats</span></div>
+          <div id="jury"></div>
+          <button class="addbtn" id="addSeat">+ add jury seat</button>
+        </div>
+        <div>
+          <div style="font:.74rem var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim);margin-bottom:.3rem">single slots</div>
+          <div id="slots"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Contract check</h2>
+      <p class="hint">The referee. A change is only a legal move if every line clears.</p>
+      <ul class="checklist" id="checks"></ul>
+    </div>
+
+    <div class="card">
+      <h2>What changed</h2>
+      <p class="hint">Your edits versus the loaded baseline.</p>
+      <div class="diff" id="diff"></div>
+    </div>
+
+    <div class="card exportcard col-wide">
+      <h2>Draft the change request</h2>
+      <p class="hint">Hand the top block to any agent with repo access. It carries the exact file, so there is nothing to interpret.</p>
+      <div class="field">
+        <label>player</label>
+        <span class="seg" id="playerSeg"></span>
+      </div>
+      <div class="field">
+        <label for="topic">topic</label>
+        <input type="text" id="topic" placeholder="e.g. reprice-rubric" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="summary">summary</label>
+        <input type="text" id="summary" placeholder="one-line PR title, e.g. reprice evaluation_rubric to 20" autocomplete="off">
+      </div>
+
+      <div class="blocked" id="exportBlocked" hidden></div>
+
+      <div class="export-block" id="exportBlock">
+        <div class="say">
+          <div class="lbl"><span id="promptLbl">tell your agent — change request</span><button class="copy" data-copy="promptOut">copy</button></div>
+          <pre id="promptOut"></pre>
+        </div>
+        <div class="say">
+          <div class="lbl"><span>resulting rules/game.config.json</span><button class="copy" data-copy="jsonOut">copy</button></div>
+          <pre id="jsonOut"></pre>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---- baseline: the current rules/game.config.json (v0.3.0) ----
+  var BASELINE = {
+    "$schema": "./contract.schema.json",
+    "meta": { "game": "articleblitz", "config_version": "0.3.0", "players": ["djm", "durracktu"], "status": "draft" },
+    "models": {
+      "harness": {
+        "jury_panel": [
+          { "model": "claude-sonnet-5", "effort": "high" },
+          { "model": "claude-sonnet-5", "effort": "high" },
+          { "model": "claude-sonnet-5", "effort": "high" }
+        ],
+        "adjudicator": { "model": "claude-opus-4-8", "effort": "xhigh" },
+        "appeals": { "model": "claude-opus-4-8", "effort": "xhigh" },
+        "rerun": "@original",
+        "calibration": { "model": "claude-sonnet-5", "effort": "low" },
+        "telemetry": { "model": "claude-haiku-4-5", "effort": "low" },
+        "report_stats": { "model": "claude-sonnet-5", "effort": "low" },
+        "report_replay": { "model": "claude-opus-4-8", "effort": "high" }
+      },
+      "pool": { "min_cost_tiers": 3, "fable_legal": false, "candidates": ["claude-haiku-4-5", "claude-sonnet-5", "claude-opus-4-8"] }
+    },
+    "phases": [
+      { "id": 0, "name": "draft", "actors": ["human"], "gate": "both players' pool suggestions submitted" },
+      { "id": 1, "name": "preference_calibration", "actors": ["human", "harness.calibration"], "gate": "both participant profiles generated" },
+      { "id": 2, "name": "candidate_pool", "actors": ["code"], "gate": "pool_size execution configurations published" },
+      { "id": 3, "name": "ban_phase", "actors": ["human", "harness.telemetry"], "gate": "alternating bans complete; finalists configurations remain" },
+      { "id": 4, "name": "betting_phase", "actors": ["human", "harness.telemetry"], "gate": "both players' priors recorded" },
+      { "id": 5, "name": "assignment_lottery", "actors": ["code"], "gate": "assignments generated by assignment_method" },
+      { "id": 6, "name": "prompt_budget", "actors": ["human", "code"], "gate": "both players' budget allocations committed" },
+      { "id": 7, "name": "information_purchases", "actors": ["code"], "gate": "purchase window closed: both players pass or budget spent" },
+      { "id": 8, "name": "execution", "actors": ["models.pool"], "gate": "all prompts executed; artifacts and telemetry captured" },
+      { "id": 9, "name": "blind_jury", "actors": ["harness.jury_panel", "harness.adjudicator"], "gate": "all reviews submitted; disagreements adjudicated" },
+      { "id": 10, "name": "human_appeals", "actors": ["human", "harness.appeals", "harness.rerun"], "gate": "challenge tokens exhausted or both players waive" },
+      { "id": 11, "name": "final_report", "actors": ["harness.report_stats", "harness.report_replay"], "gate": "report delivered; game archived; retrospective opened" }
+    ],
+    "weights": { "jury": { "output_quality": 0.35, "evidence": 0.2, "citations": 0.1, "cost_efficiency": 0.15, "reproducibility": 0.1, "confidence_calibration": 0.1 } },
+    "params": {
+      "pool_size": 8, "finalists": 5, "ban_order": ["djm", "durracktu"], "prompt_budget_points": 100, "challenge_tokens": 3,
+      "assignment_method": "fully_random",
+      "information_purchases": { "context_size": 10, "temperature": 10, "model_family": 25, "reasoning_depth": 15, "repository_count": 10, "evaluation_rubric": 30 },
+      "adjudication_trigger": { "type": "score_spread", "threshold": 3, "scale": 10 },
+      "cache_jury_packets": true
+    }
+  };
+
+  var RAW_URL = "https://raw.githubusercontent.com/djcdevelopment/articleblitz/rules/v0.3-draft/rules/game.config.json";
+  var MODELS = ["claude-haiku-4-5", "claude-sonnet-5", "claude-opus-4-8", "claude-fable-5"];
+  var EFFORTS = ["low", "medium", "high", "xhigh", "max"];
+  var ASSIGN = ["fully_random", "snake_draft", "weighted_lottery", "auction", "hidden_until_execution"];
+  var TIER = { "claude-haiku-4-5": 1, "claude-sonnet-5": 2, "claude-opus-4-8": 3, "claude-fable-5": 0 };
+  var WLABELS = {
+    output_quality: "Output quality", evidence: "Evidence", citations: "Citations",
+    cost_efficiency: "Cost efficiency", reproducibility: "Reproducibility", confidence_calibration: "Confidence calibration"
+  };
+  var MKT_LABELS = {
+    context_size: "Context size", temperature: "Temperature", model_family: "Model family",
+    reasoning_depth: "Reasoning depth", repository_count: "Repository count", evaluation_rubric: "Evaluation rubric"
+  };
+
+  var clone = function (o) { return JSON.parse(JSON.stringify(o)); };
+  var base = clone(BASELINE);
+  var cfg = clone(BASELINE);
+  var player = base.meta.players[0];
+
+  // ---- tiny DOM helpers ----
+  function h(tag, attrs, kids) {
+    var e = document.createElement(tag);
+    if (attrs) for (var k in attrs) {
+      if (k === "class") e.className = attrs[k];
+      else if (k === "html") e.innerHTML = attrs[k];
+      else if (k === "text") e.textContent = attrs[k];
+      else e.setAttribute(k, attrs[k]);
+    }
+    (kids || []).forEach(function (c) { if (c) e.appendChild(c); });
+    return e;
+  }
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---- control factories ----
+  function stepper(get, set, opts) {
+    opts = opts || {};
+    var min = opts.min, max = opts.max, step = opts.step || 1, unit = opts.unit || "";
+    var wrap = h("div", { class: "stepper" });
+    var dec = h("button", { type: "button", text: "−", "aria-label": "decrease" });
+    var val = h("span", { class: "val" });
+    var inc = h("button", { type: "button", text: "+", "aria-label": "increase" });
+    function paint() {
+      val.textContent = get() + unit;
+      dec.disabled = (min != null && get() <= min);
+      inc.disabled = (max != null && get() >= max);
+    }
+    dec.onclick = function () { var v = +(get() - step).toFixed(4); if (min != null && v < min) v = min; set(v); refresh(); };
+    inc.onclick = function () { var v = +(get() + step).toFixed(4); if (max != null && v > max) v = max; set(v); refresh(); };
+    wrap.append(dec, val, inc);
+    wrap._paint = paint; paint();
+    return wrap;
+  }
+
+  function toggle(get, set) {
+    var t = h("div", { class: "toggle", role: "switch", tabindex: "0" });
+    function paint() { t.setAttribute("aria-checked", get() ? "true" : "false"); }
+    function flip() { set(!get()); refresh(); }
+    t.onclick = flip;
+    t.onkeydown = function (e) { if (e.key === " " || e.key === "Enter") { e.preventDefault(); flip(); } };
+    t._paint = paint; paint();
+    return t;
+  }
+
+  function segmented(get, set, options, opts) {
+    opts = opts || {};
+    var seg = h("div", { class: "seg" + (opts.mini ? " miniseg" : "") });
+    var btns = options.map(function (o) {
+      var v = (typeof o === "string") ? o : o.v;
+      var label = (typeof o === "string") ? o : o.label;
+      var b = h("button", { type: "button", text: label, "data-v": v });
+      b.onclick = function () { set(v); refresh(); };
+      seg.appendChild(b);
+      return { b: b, v: v };
+    });
+    seg._paint = function () { var cur = String(get()); btns.forEach(function (x) { x.b.setAttribute("aria-pressed", String(x.v) === cur ? "true" : "false"); }); };
+    seg._paint();
+    return seg;
+  }
+
+  function modelSlot(obj, opts) {
+    // obj is the {model, effort} object mutated in place
+    opts = opts || {};
+    var wrap = h("div", { class: "ctl", style: "flex-wrap:wrap;justify-content:flex-end;gap:.4rem" });
+    var sel = h("select", { class: "sel" });
+    MODELS.concat(MODELS.indexOf(obj.model) < 0 ? [obj.model] : []).forEach(function (m) {
+      sel.appendChild(h("option", { value: m, text: m, selected: m === obj.model ? "selected" : null }));
+    });
+    sel.onchange = function () { obj.model = sel.value; refresh(); };
+    var eff = segmented(function () { return obj.effort; }, function (v) { obj.effort = v; }, EFFORTS, { mini: true });
+    wrap.append(sel, eff);
+    wrap._paint = function () { sel.value = obj.model; eff._paint(); };
+    return wrap;
+  }
+
+  function labeledRow(name, sub, control) {
+    var lab = h("div", { class: "lab" }, [h("div", { class: "name", text: name })]);
+    if (sub) lab.appendChild(h("div", { class: "sub", text: sub }));
+    return h("div", { class: "row" }, [lab, h("div", { class: "ctl" }, [control])]);
+  }
+
+  // ---- painters registry (call _paint on every control after cfg changes) ----
+  var painters = [];
+  function reg(el) { if (el && el._paint) painters.push(el); return el; }
+
+  // ================= BUILD =================
+  function buildWeights() {
+    var host = $("weights"); host.innerHTML = "";
+    Object.keys(base.weights.jury).forEach(function (key) {
+      var row = h("div", { class: "wrow" });
+      var name = h("span", { class: "wname", text: WLABELS[key] || key });
+      var val = h("span", { class: "wval" });
+      var top = h("div", { class: "wtop" }, [name, val]);
+      var slider = h("input", { type: "range", min: "0", max: "1", step: "0.01" });
+      slider.value = cfg.weights.jury[key];
+      slider.oninput = function () { cfg.weights.jury[key] = +(+slider.value).toFixed(2); refresh(); };
+      row.append(top, slider);
+      row._paint = function () {
+        slider.value = cfg.weights.jury[key];
+        var v = cfg.weights.jury[key];
+        val.textContent = v.toFixed(2) + "  ·  " + Math.round(v * 100) + "%";
+      };
+      reg(row); host.appendChild(row);
+    });
+  }
+
+  function buildPool() {
+    var host = $("pool"); host.innerHTML = "";
+    host.appendChild(labeledRow("Fable legal in pool", "models.pool.fable_legal",
+      reg(toggle(function () { return cfg.models.pool.fable_legal; }, function (v) {
+        cfg.models.pool.fable_legal = v;
+        if (!v) cfg.models.pool.candidates = cfg.models.pool.candidates.filter(function (c) { return c !== "claude-fable-5"; });
+      }))));
+    host.appendChild(labeledRow("Min cost tiers", "models.pool.min_cost_tiers",
+      reg(stepper(function () { return cfg.models.pool.min_cost_tiers; }, function (v) { cfg.models.pool.min_cost_tiers = v; }, { min: 1, max: 4 }))));
+
+    var chipWrap = h("div", { class: "chips" });
+    var chipEls = MODELS.map(function (m) {
+      var c = h("button", { type: "button", class: "chip", text: m.replace("claude-", "") });
+      c.onclick = function () {
+        var arr = cfg.models.pool.candidates, i = arr.indexOf(m);
+        if (i < 0) arr.push(m); else arr.splice(i, 1);
+        refresh();
+      };
+      chipWrap.appendChild(c);
+      return { c: c, m: m };
+    });
+    var chipsRow = h("div", {}, [
+      h("div", { class: "lab", style: "margin:.5rem 0 .4rem" }, [
+        h("div", { class: "name", text: "Candidate pool" }),
+        h("div", { class: "sub", text: "models.pool.candidates" })
+      ]),
+      chipWrap
+    ]);
+    chipsRow._paint = function () {
+      chipEls.forEach(function (x) {
+        var on = cfg.models.pool.candidates.indexOf(x.m) >= 0;
+        x.c.setAttribute("aria-pressed", on ? "true" : "false");
+        x.c.disabled = (x.m === "claude-fable-5" && !cfg.models.pool.fable_legal);
+      });
+    };
+    reg(chipsRow); host.appendChild(chipsRow);
+  }
+
+  function buildParams() {
+    var host = $("params"); host.innerHTML = "";
+    var p = function () { return cfg.params; };
+    host.appendChild(labeledRow("Pool size", "params.pool_size",
+      reg(stepper(function () { return p().pool_size; }, function (v) { p().pool_size = v; }, { min: 2, max: 24 }))));
+    host.appendChild(labeledRow("Finalists", "params.finalists",
+      reg(stepper(function () { return p().finalists; }, function (v) { p().finalists = v; }, { min: 1, max: 24 }))));
+    host.appendChild(labeledRow("Prompt budget", "params.prompt_budget_points",
+      reg(stepper(function () { return p().prompt_budget_points; }, function (v) { p().prompt_budget_points = v; }, { min: 1, max: 500, step: 5, unit: " pts" }))));
+    host.appendChild(labeledRow("Challenge tokens", "params.challenge_tokens",
+      reg(stepper(function () { return p().challenge_tokens; }, function (v) { p().challenge_tokens = v; }, { min: 0, max: 10 }))));
+    host.appendChild(labeledRow("Cache jury packets", "params.cache_jury_packets",
+      reg(toggle(function () { return p().cache_jury_packets; }, function (v) { p().cache_jury_packets = v; }))));
+
+    var asRow = h("div", {}, [
+      h("div", { class: "lab", style: "margin:.55rem 0 .4rem" }, [
+        h("div", { class: "name", text: "Assignment method" }),
+        h("div", { class: "sub", text: "params.assignment_method" })
+      ]),
+      reg(segmented(function () { return p().assignment_method; }, function (v) { p().assignment_method = v; },
+        ASSIGN.map(function (a) { return { v: a, label: a.replace(/_/g, " ") }; })))
+    ]);
+    host.appendChild(asRow);
+
+    var boRow = h("div", {}, [
+      h("div", { class: "lab", style: "margin:.55rem 0 .4rem" }, [
+        h("div", { class: "name", text: "Bans first" }),
+        h("div", { class: "sub", text: "params.ban_order" })
+      ]),
+      reg(segmented(function () { return p().ban_order[0]; }, function (v) {
+        var other = base.meta.players.filter(function (x) { return x !== v; })[0];
+        p().ban_order = [v, other];
+      }, base.meta.players))
+    ]);
+    host.appendChild(boRow);
+  }
+
+  function buildMarket() {
+    var host = $("market"); host.innerHTML = "";
+    Object.keys(base.params.information_purchases).forEach(function (key) {
+      host.appendChild(labeledRow(MKT_LABELS[key] || key, key,
+        reg(stepper(function () { return cfg.params.information_purchases[key]; },
+          function (v) { cfg.params.information_purchases[key] = v; }, { min: 0, max: 100, step: 5, unit: " pts" }))));
+    });
+  }
+
+  function buildAdjud() {
+    var host = $("adjud"); host.innerHTML = "";
+    var a = function () { return cfg.params.adjudication_trigger; };
+    var tRow = h("div", {}, [
+      h("div", { class: "lab", style: "margin-bottom:.4rem" }, [h("div", { class: "name", text: "Trigger type" })]),
+      reg(segmented(function () { return a().type; }, function (v) { a().type = v; },
+        [{ v: "score_spread", label: "score spread" }, { v: "verdict_flip", label: "verdict flip" }]))
+    ]);
+    host.appendChild(tRow);
+    host.appendChild(labeledRow("Threshold", "adjudication_trigger.threshold",
+      reg(stepper(function () { return a().threshold; }, function (v) { a().threshold = v; }, { min: 0, max: 10, step: 0.5 }))));
+    host.appendChild(labeledRow("Scale", "adjudication_trigger.scale",
+      reg(stepper(function () { return a().scale; }, function (v) { a().scale = v; }, { min: 1, max: 100 }))));
+  }
+
+  function buildJury() {
+    var host = $("jury"); host.innerHTML = "";
+    cfg.models.harness.jury_panel.forEach(function (seat, idx) {
+      var row = h("div", { class: "mrow" });
+      var name = h("div", { class: "mname" }, [
+        h("div", { text: "seat " + (idx + 1) }),
+        h("div", { class: "sub", text: "reviewer" })
+      ]);
+      var slot = reg(modelSlot(seat));
+      var rm = h("button", { class: "rm", type: "button", title: "remove seat", text: "×" });
+      rm.onclick = function () { cfg.models.harness.jury_panel.splice(idx, 1); buildJury(); refresh(); };
+      rm.disabled = cfg.models.harness.jury_panel.length <= 2;
+      if (rm.disabled) rm.style.opacity = ".3";
+      row.append(name, slot, rm);
+      host.appendChild(row);
+    });
+  }
+
+  function buildSlots() {
+    var host = $("slots"); host.innerHTML = "";
+    var order = ["adjudicator", "appeals", "calibration", "telemetry", "report_stats", "report_replay"];
+    order.forEach(function (slotKey) {
+      var obj = cfg.models.harness[slotKey];
+      var row = h("div", { class: "mrow" });
+      var name = h("div", { class: "mname" }, [h("div", { text: slotKey.replace(/_/g, " ") })]);
+      var slot = reg(modelSlot(obj));
+      row.append(name, slot);
+      host.appendChild(row);
+    });
+    var rr = h("div", { class: "mrow" }, [
+      h("div", { class: "mname" }, [h("div", { text: "rerun" }), h("div", { class: "sub", text: "sentinel" })]),
+      h("span", { class: "sub", style: "font-family:var(--mono);color:var(--accent)", text: "@original" })
+    ]);
+    host.appendChild(rr);
+  }
+
+  // ---- derived views ----
+  function weightSum() {
+    return Object.keys(cfg.weights.jury).reduce(function (s, k) { return s + cfg.weights.jury[k]; }, 0);
+  }
+
+  function runChecks() {
+    var c = [];
+    var sum = weightSum();
+    c.push({ ok: Math.abs(sum - 1) < 1e-6, level: "err", msg: "weights.jury sum to 1.00 (now " + sum.toFixed(2) + ")" });
+    c.push({ ok: cfg.params.pool_size >= 2, level: "err", msg: "pool_size ≥ 2" });
+    c.push({ ok: cfg.params.finalists >= 1, level: "err", msg: "finalists ≥ 1" });
+    c.push({ ok: cfg.params.finalists < cfg.params.pool_size, level: "err", msg: "finalists < pool_size" });
+    c.push({ ok: cfg.models.pool.candidates.length >= 2, level: "err", msg: "pool has ≥ 2 candidates" });
+    var uniq = new Set(cfg.models.pool.candidates).size === cfg.models.pool.candidates.length;
+    c.push({ ok: uniq, level: "err", msg: "candidates are unique" });
+    var fableOk = cfg.models.pool.candidates.indexOf("claude-fable-5") < 0 || cfg.models.pool.fable_legal;
+    c.push({ ok: fableOk, level: "err", msg: "fable in pool only if fable_legal" });
+    c.push({ ok: cfg.models.harness.jury_panel.length >= 2, level: "err", msg: "jury_panel has ≥ 2 seats" });
+    c.push({ ok: cfg.params.adjudication_trigger.threshold >= 0, level: "err", msg: "adjudication threshold ≥ 0" });
+    // soft warnings
+    var tiers = new Set(cfg.models.pool.candidates.map(function (m) { return TIER[m]; })).size;
+    c.push({ ok: tiers >= cfg.models.pool.min_cost_tiers, level: "warn", msg: "pool spans ≥ min_cost_tiers (" + tiers + "/" + cfg.models.pool.min_cost_tiers + " tiers)" });
+    return c;
+  }
+
+  function paintChecks(checks) {
+    var host = $("checks"); host.innerHTML = "";
+    checks.forEach(function (x) {
+      var cls = x.ok ? "ok" : x.level;
+      var mark = x.ok ? "✓" : (x.level === "warn" ? "!" : "✗");
+      host.appendChild(h("li", { class: cls }, [h("span", { class: "m", text: mark }), h("span", { text: x.msg })]));
+    });
+  }
+
+  // ---- diff walker ----
+  function diffPaths() {
+    var out = [];
+    walk("", base, cfg);
+    return out;
+    function isObj(v) { return v && typeof v === "object" && !Array.isArray(v); }
+    function walk(path, a, b) {
+      if (Array.isArray(a) || Array.isArray(b) || !isObj(a) || !isObj(b)) {
+        if (JSON.stringify(a) !== JSON.stringify(b)) out.push({ path: path, o: a, n: b });
+        return;
+      }
+      var keys = {};
+      Object.keys(a).forEach(function (k) { keys[k] = 1; });
+      Object.keys(b).forEach(function (k) { keys[k] = 1; });
+      Object.keys(keys).forEach(function (k) {
+        var np = path ? path + "." + k : k;
+        walk(np, a ? a[k] : undefined, b ? b[k] : undefined);
+      });
+    }
+  }
+
+  function fmtVal(v) {
+    if (Array.isArray(v)) return "[" + v.map(function (x) { return typeof x === "object" ? x.model + "·" + x.effort : x; }).join(", ") + "]";
+    if (v && typeof v === "object") return v.model + "·" + v.effort;
+    return String(v);
+  }
+
+  function paintDiff(diffs) {
+    var host = $("diff"); host.innerHTML = "";
+    if (!diffs.length) { host.appendChild(h("div", { class: "none", text: "No changes yet — the config matches the baseline." })); return; }
+    diffs.forEach(function (d) {
+      host.appendChild(h("div", { class: "d" }, [
+        h("div", { class: "p", text: d.path }),
+        h("div", { class: "ch", html: '<span class="o">' + esc(fmtVal(d.o)) + '</span><span class="arrow">→</span><span class="n">' + esc(fmtVal(d.n)) + "</span>" })
+      ]));
+    });
+  }
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  // ---- export ----
+  function slug(s) { return (s || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""); }
+
+  function buildExport(diffs, checks) {
+    var hardFail = checks.some(function (c) { return !c.ok && c.level === "err"; });
+    var blocked = $("exportBlocked"), block = $("exportBlock");
+    if (!diffs.length) {
+      block.hidden = true; blocked.hidden = false;
+      blocked.textContent = "Make an edit above and the change request appears here.";
+      return;
+    }
+    if (hardFail) {
+      block.hidden = true; blocked.hidden = false;
+      blocked.textContent = "✗ Not a legal move yet — clear the red checks in the contract card first.";
+      return;
+    }
+    blocked.hidden = true; block.hidden = false;
+
+    var topic = slug($("topic").value) || "rules-change";
+    var summaryText = $("summary").value.trim() || autoSummary(diffs);
+    var branch = "cr/" + player + "/" + topic;
+    var json = JSON.stringify(cfg, null, 2);
+    var bullets = diffs.map(function (d) { return "  - " + d.path + ": " + fmtVal(d.o) + " → " + fmtVal(d.n); }).join("\n");
+
+    var prompt =
+"Read AGENTS.md in https://github.com/djcdevelopment/articleblitz.git and follow it. Acting for player " + player +
+", create branch " + branch + " and replace the entire contents of rules/game.config.json with the exact JSON at the bottom of this message. " +
+"Change nothing else in the repo — do not touch rules/ratification.json.\n\n" +
+"Before opening the PR, verify: the file is valid JSON, it validates against rules/contract.schema.json, and every weights group sums to 1.0.\n\n" +
+"Open a pull request to main titled \"CR: " + summaryText + "\". In the PR body, explain the intent in one paragraph and list exactly these changes:\n" +
+bullets + "\n\n" +
+"Then stop. Do not merge it yourself — the other player reviews and approves.\n\n" +
+"--- rules/game.config.json (write this file verbatim) ---\n" +
+json + "\n";
+
+    $("promptOut").textContent = prompt;
+    $("jsonOut").textContent = json;
+    $("promptLbl").textContent = "tell your agent — " + branch;
+  }
+
+  function autoSummary(diffs) {
+    if (diffs.length === 1) return diffs[0].path + " → " + fmtVal(diffs[0].n);
+    return diffs.length + " rule changes";
+  }
+
+  // ---- status ----
+  function paintStatus(diffs, checks) {
+    var s = $("status"), t = $("statusText");
+    var hardFail = checks.some(function (c) { return !c.ok && c.level === "err"; });
+    s.classList.remove("invalid", "dirty");
+    if (hardFail) { s.classList.add("invalid"); t.textContent = "illegal move"; }
+    else if (diffs.length) { s.classList.add("dirty"); t.textContent = diffs.length + (diffs.length === 1 ? " change" : " changes"); }
+    else { t.textContent = "in sync"; }
+  }
+
+  // ---- master refresh ----
+  function refresh() {
+    painters.forEach(function (p) { try { p._paint(); } catch (e) {} });
+    // weight sum meter
+    var sum = weightSum();
+    var meter = $("summeter"), fill = $("sumFill"), read = $("sumRead");
+    fill.style.width = Math.min(100, sum * 100) + "%";
+    var ok = Math.abs(sum - 1) < 1e-6;
+    meter.classList.toggle("off", !ok);
+    read.textContent = "Σ " + sum.toFixed(2) + (ok ? "  ✓" : "");
+    read.className = "sum " + (ok ? "ok" : "off");
+    var checks = runChecks();
+    var diffs = diffPaths();
+    paintChecks(checks);
+    paintDiff(diffs);
+    buildExport(diffs, checks);
+    paintStatus(diffs, checks);
+    $("verTag").textContent = "v" + cfg.meta.config_version;
+  }
+
+  // ---- rebuild everything from cfg (after structural change / new baseline) ----
+  function buildAll() {
+    painters = [];
+    buildWeights(); buildPool(); buildParams(); buildMarket(); buildAdjud(); buildJury(); buildSlots();
+    refresh();
+  }
+
+  // ---- player segmented in export ----
+  (function () {
+    var seg = segmented(function () { return player; }, function (v) { player = v; }, base.meta.players);
+    $("playerSeg").appendChild(seg);
+    // seg registered manually so it repaints:
+    seg._paintPlayer = seg._paint; painters.push(seg);
+  })();
+
+  // ---- add seat ----
+  $("addSeat").onclick = function () {
+    cfg.models.harness.jury_panel.push({ model: "claude-sonnet-5", effort: "high" });
+    buildJury(); refresh();
+  };
+
+  // ---- reset ----
+  $("resetBtn").onclick = function () { cfg = clone(base); rebuildPlayerAware(); };
+  function rebuildPlayerAware() { buildAll(); }
+
+  // ---- normalize weights ----
+  $("normBtn").onclick = function () {
+    var sum = weightSum();
+    if (sum === 0) return;
+    Object.keys(cfg.weights.jury).forEach(function (k) { cfg.weights.jury[k] = +(cfg.weights.jury[k] / sum).toFixed(2); });
+    // fix rounding drift onto the largest key
+    var drift = +(1 - weightSum()).toFixed(2);
+    if (drift !== 0) {
+      var big = Object.keys(cfg.weights.jury).sort(function (a, b) { return cfg.weights.jury[b] - cfg.weights.jury[a]; })[0];
+      cfg.weights.jury[big] = +(cfg.weights.jury[big] + drift).toFixed(2);
+    }
+    refresh();
+  };
+
+  // ---- topic / summary live ----
+  $("topic").oninput = refresh;
+  $("summary").oninput = refresh;
+
+  // ---- copy buttons ----
+  document.querySelectorAll(".copy").forEach(function (btn) {
+    btn.onclick = function () {
+      var txt = $(btn.getAttribute("data-copy")).textContent;
+      var done = function (ok) { btn.textContent = ok ? "copied ✓" : "select+copy"; setTimeout(function () { btn.textContent = "copy"; }, 1500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(function () { done(true); }, function () { done(false); });
+      else done(false);
+    };
+  });
+
+  // ---- theme toggle ----
+  $("themeBtn").onclick = function () {
+    var cur = document.documentElement.getAttribute("data-theme");
+    var next = cur === "dark" ? "light" : (cur === "light" ? "dark" : (matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "dark"));
+    document.documentElement.setAttribute("data-theme", next);
+  };
+
+  // ---- sync: apply pasted / fetch ----
+  function adoptBaseline(obj) {
+    base = clone(obj); cfg = clone(obj);
+    if (base.meta && base.meta.players && base.meta.players.indexOf(player) < 0) player = base.meta.players[0];
+    buildAll();
+  }
+  $("applyBtn").onclick = function () {
+    var msg = $("syncMsg"); msg.className = "msg";
+    try {
+      var obj = JSON.parse($("pasteBox").value);
+      if (!obj.meta || !obj.weights || !obj.params) throw new Error("that doesn't look like a game.config.json");
+      adoptBaseline(obj);
+      msg.textContent = "✓ baseline updated from pasted config"; msg.classList.add("ok");
+    } catch (e) { msg.textContent = "✗ " + e.message; msg.classList.add("bad"); }
+  };
+  $("fetchBtn").onclick = function () {
+    var msg = $("syncMsg"); msg.className = "msg"; msg.textContent = "loading…";
+    fetch(RAW_URL, { cache: "no-store" }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status); return r.json();
+    }).then(function (obj) {
+      adoptBaseline(obj);
+      msg.textContent = "✓ loaded live config from the rules/v0.3-draft branch"; msg.classList.add("ok");
+    }).catch(function (e) {
+      msg.textContent = "✗ couldn't fetch (" + e.message + ") — paste the file instead"; msg.classList.add("bad");
+    });
+  };
+
+  buildAll();
+})();
+</script>
+</body>
+</html>
