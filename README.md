@@ -23,9 +23,12 @@ matter less than both players agreeing to them before the break.
 
 ## New here? Start with onboarding
 
-Open [`docs/index.html`](docs/index.html) — mobile-first walkthrough of the
-premise, every phase (with opt-in samples), how to agree, and how to submit
-change requests via your agent. (Enable GitHub Pages on `/docs` to serve it.)
+Open **<https://djcdevelopment.github.io/articleblitz/>** — mobile-first
+walkthrough of the premise, every phase (with opt-in samples), how to agree,
+and how to submit change requests via your agent. (Source:
+[`docs/index.html`](docs/index.html); Pages currently builds from the
+`rules/v0.3-draft` branch — switch the Pages source to `main` after the first
+PR merges.)
 
 **Agents:** read [`AGENTS.md`](AGENTS.md) before your first write. It is the
 binding protocol — branch patterns, preflight checks, merge rules, and what
