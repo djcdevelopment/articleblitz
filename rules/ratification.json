@@ -1,0 +1,16 @@
+{
+  "config_version": "0.3.0",
+  "game_number": 1,
+  "ready_to_play": {
+    "djm": false,
+    "durracktu": false
+  },
+  "locked": false,
+  "locked_tag": null,
+  "process": {
+    "amend": "branch + pull request; merge requires approval from the other player",
+    "ratify": "each player flips their own ready_to_play flag via PR, approved by the other",
+    "lock": "when both flags are true, tag the commit game-<n>-locked; locked=true; no rule changes for that game",
+    "post_game": "proposals go to RETROSPECTIVE.md; applied via PRs; version bumped; flags reset to false"
+  }
+}

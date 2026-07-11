@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "articleblitz/contract/v0.3",
+  "title": "ArticleBlitz game contract",
+  "description": "Every game.config.json must satisfy this schema. Changing the schema itself is a rule change: PR + other-player approval.",
+  "type": "object",
+  "required": ["meta", "models", "phases", "weights", "params"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "meta": {
+      "type": "object",
+      "required": ["game", "config_version", "players"],
+      "additionalProperties": false,
+      "properties": {
+        "game": { "const": "articleblitz" },
+        "config_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "players": { "type": "array", "items": { "type": "string" }, "minItems": 2, "maxItems": 2 },
+        "status": { "enum": ["draft", "ratified", "locked", "archived"] }
+      }
+    },
+    "models": {
+      "type": "object",
+      "required": ["harness", "pool"],
+      "additionalProperties": false,
+      "properties": {
+        "harness": {
+          "type": "object",
+          "description": "Infrastructure slots. Invisible to scoring. Extend by adding a slot here and to the schema via PR.",
+          "required": [
+            "jury_panel",
+            "adjudicator",
+            "appeals",
+            "rerun",
+            "calibration",
+            "telemetry",
+            "report_stats",
+            "report_replay"
+          ],
+          "additionalProperties": { "$ref": "#/$defs/slotValue" },
+          "properties": {
+            "jury_panel": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/modelSlot" },
+              "minItems": 2,
+              "description": "One entry per reviewer of each output. No entry reviews output produced by the same model."
+            },
+            "adjudicator": { "$ref": "#/$defs/modelSlot" },
+            "appeals": { "$ref": "#/$defs/modelSlot" },
+            "rerun": { "$ref": "#/$defs/slotValue" },
+            "calibration": { "$ref": "#/$defs/modelSlot" },
+            "telemetry": { "$ref": "#/$defs/modelSlot" },
+            "report_stats": { "$ref": "#/$defs/modelSlot" },
+            "report_replay": { "$ref": "#/$defs/modelSlot" }
+          }
+        },
+        "pool": {
+          "type": "object",
+          "description": "Game pieces. Cost/runtime/tokens are scored outputs, so tier spread is the game.",
+          "required": ["min_cost_tiers", "fable_legal", "candidates"],
+          "additionalProperties": false,
+          "properties": {
+            "min_cost_tiers": { "type": "integer", "minimum": 1 },
+            "fable_legal": { "type": "boolean" },
+            "candidates": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "minItems": 2,
+              "uniqueItems": true
+            }
+          }
+        }
+      }
+    },
+    "phases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "actors", "gate"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "integer", "minimum": 0 },
+          "name": { "type": "string", "minLength": 1 },
+          "actors": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" },
+            "description": "Who runs the phase: 'human', 'code', 'models.pool', or a harness slot like 'harness.jury_panel'. Deterministic work must be 'code', never a model."
+          },
+          "gate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Condition that must hold before the next phase may begin."
+          }
+        }
+      }
+    },
+    "weights": {
+      "type": "object",
+      "description": "Scoring weights. Each group must sum to 1.0 — the schema cannot enforce sums; check on PR review (or add CI later).",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "params": {
+      "type": "object",
+      "required": [
+        "pool_size",
+        "finalists",
+        "ban_order",
+        "prompt_budget_points",
+        "challenge_tokens",
+        "assignment_method",
+        "information_purchases",
+        "adjudication_trigger"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "pool_size": { "type": "integer", "minimum": 2 },
+        "finalists": { "type": "integer", "minimum": 1 },
+        "ban_order": { "type": "array", "items": { "type": "string" }, "minItems": 2 },
+        "prompt_budget_points": { "type": "integer", "minimum": 1 },
+        "challenge_tokens": { "type": "integer", "minimum": 0 },
+        "assignment_method": {
+          "enum": ["fully_random", "snake_draft", "weighted_lottery", "auction", "hidden_until_execution"]
+        },
+        "information_purchases": {
+          "type": "object",
+          "description": "Reveal catalog: item -> price in prompt budget points.",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "adjudication_trigger": {
+          "type": "object",
+          "required": ["type", "threshold"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "enum": ["score_spread", "verdict_flip"] },
+            "threshold": { "type": "number", "minimum": 0 },
+            "scale": { "type": "number", "minimum": 1 }
+          }
+        },
+        "cache_jury_packets": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "effort": { "enum": ["low", "medium", "high", "xhigh", "max"] },
+    "modelSlot": {
+      "type": "object",
+      "required": ["model", "effort"],
+      "additionalProperties": false,
+      "properties": {
+        "model": { "type": "string", "minLength": 1 },
+        "effort": { "$ref": "#/$defs/effort" }
+      }
+    },
+    "sentinel": {
+      "type": "string",
+      "pattern": "^@",
+      "description": "Special values: '@original' = same model + config as the run being referenced."
+    },
+    "slotValue": {
+      "oneOf": [{ "$ref": "#/$defs/modelSlot" }, { "$ref": "#/$defs/sentinel" }]
+    }
+  }
+}
