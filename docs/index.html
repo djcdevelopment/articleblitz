@@ -240,8 +240,8 @@
         <div class="cal-choices" id="calChoices" hidden>
           <button type="button" data-v="2">++</button>
           <button type="button" data-v="-2">−−</button>
-          <button type="button" data-v="0">none</button>
-          <button type="button" data-v="B">both</button>
+          <button type="button" data-v="S">skip</button>
+          <button type="button" data-v="NA">N/A</button>
         </div>
         <button type="button" class="cal-start" id="calStart">▶ start the clock</button>
         <div class="cal-log" id="calLog"></div>
@@ -250,9 +250,10 @@
       <a href="https://claude.ai/code/artifact/60d625fc-1336-4cd2-a278-e60c7ce5fdd9">matrix
       selection equation</a> with reaction time as the multiplier. The first tap commits
       instantly: tap fast and your conviction lands at full strength; deliberate and it
-      decays toward zero. Timeout records <i>none</i> at 0.0 — hesitation is data too.
-      The profile this writes (decision speed, conviction, tension, hesitations) feeds
-      the final report.</p>
+      decays toward zero. <i>skip</i> passes and moves on; <i>N/A</i> rejects the
+      statement as not applicable — both score zero weight, but a fast zero is still a
+      fast decision. Timeout also scores zero — hesitation is data too. The profile this
+      writes (decision speed, conviction, N/A flags, hesitations) feeds the final report.</p>
     </div></details>
   </div>
 
@@ -538,9 +539,9 @@ document.querySelectorAll('button[data-copy]').forEach(function (btn) {
     stopTimer();
     btn.classList.add('sel'); // brief flash of what you tapped
     var f = left / T; // time factor: 1.0 instant → 0.0 buzzer
-    var label = v === 'B' ? 'both' : v === '2' ? '++' : v === '-2' ? '−−' : 'none';
-    var wtxt = v === 'B' ? '±' + fmt(2 * f)
-             : v === '0' ? '0.0'
+    var label = v === 'NA' ? 'n/a' : v === 'S' ? 'skip' : v === '2' ? '++' : '−−';
+    var wtxt = v === 'NA' ? '0.0 — statement rejected'
+             : v === 'S' ? '0.0 — moved on'
              : (v === '2' ? '+' : '−') + fmt(2 * f);
     results.push({ label: label, f: f });
     logLine('call ' + (i + 1) + ': <span class="a">' + label + '</span> @ ' + fmt(left) + 's left → weight ' + wtxt);
@@ -549,7 +550,7 @@ document.querySelectorAll('button[data-copy]').forEach(function (btn) {
   function timedOut() {
     stopTimer();
     results.push({ label: 'timeout', f: 0 });
-    logLine('call ' + (i + 1) + ': timed out → <span class="a">none</span>, weight 0.0 (hesitation is data)');
+    logLine('call ' + (i + 1) + ': <span class="a">timed out</span> → no call, weight 0.0 (hesitation is data)');
     setTimeout(next, 450);
   }
   function finish() {
@@ -558,12 +559,12 @@ document.querySelectorAll('button[data-copy]').forEach(function (btn) {
     el.choices.hidden = true;
     var n = results.length;
     var speed = results.reduce(function (s, r) { return s + r.f; }, 0) / n;
-    var conv = results.reduce(function (s, r) { return s + (r.label === 'none' || r.label === 'timeout' ? 0 : r.f); }, 0) / n;
-    var tension = results.filter(function (r) { return r.label === 'both'; }).length;
+    var conv = results.reduce(function (s, r) { return s + (r.label === '++' || r.label === '−−' ? r.f : 0); }, 0) / n;
+    var naFlags = results.filter(function (r) { return r.label === 'n/a'; }).length;
     var hesit = results.filter(function (r) { return r.label === 'timeout'; }).length;
     logLine('');
     logLine('<span class="g">profile: { decision_speed: ' + speed.toFixed(2) + ', conviction: ' + conv.toFixed(2) + ',</span>');
-    logLine('<span class="g">           tension_calls: ' + tension + ', hesitations: ' + hesit + ' }</span>');
+    logLine('<span class="g">           na_flags: ' + naFlags + ', hesitations: ' + hesit + ' }</span>');
     el.start.textContent = '↻ run it again';
     el.start.hidden = false;
   }
