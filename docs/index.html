@@ -112,14 +112,12 @@
   .cal-bar-fill { height: 100%; width: 100%; background: var(--accent); border-radius: 3px; }
   .cal-q { font-family: var(--serif); font-style: italic; font-size: 1.05rem; min-height: 3em; }
   .cal-choices { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; margin: .6rem 0 .5rem; }
-  .cal-choices button, .cal-lock, .cal-start {
+  .cal-choices[hidden] { display: none; }
+  .cal-choices button, .cal-start {
     font: .9rem var(--mono); padding: .7rem 0; border-radius: 9px; cursor: pointer;
     border: 1px solid var(--line); background: var(--panel); color: var(--ink); min-height: 44px;
   }
   .cal-choices button.sel { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); font-weight: 700; }
-  .cal-lock { width: 100%; }
-  .cal-lock:enabled { border-color: var(--accent); color: var(--accent); font-weight: 700; }
-  .cal-lock:disabled { opacity: .45; cursor: default; }
   .cal-start { width: 100%; border-color: var(--accent); color: var(--accent); font-weight: 700; margin-top: .5rem; }
   .cal-log { font-family: var(--mono); font-size: .74rem; line-height: 1.7; margin-top: .7rem;
     color: var(--ink-dim); white-space: pre-wrap; word-break: break-word; }
@@ -238,23 +236,23 @@
       <div class="cal" id="cal">
         <div class="cal-top"><span id="calStep">ready</span><span class="cal-clock" id="calClock">6.0</span></div>
         <div class="cal-bar"><div class="cal-bar-fill" id="calBar"></div></div>
-        <p class="cal-q" id="calQ">Five gut calls, six seconds each. React — don't think: a fast signal counts for more than a slow one.</p>
+        <p class="cal-q" id="calQ">Five gut calls, six seconds each. Your first tap is the answer — no confirm, no take-backs.</p>
         <div class="cal-choices" id="calChoices" hidden>
           <button type="button" data-v="2">++</button>
           <button type="button" data-v="-2">−−</button>
           <button type="button" data-v="0">none</button>
           <button type="button" data-v="B">both</button>
         </div>
-        <button type="button" class="cal-lock" id="calLock" hidden disabled>lock in</button>
         <button type="button" class="cal-start" id="calStart">▶ start the clock</button>
         <div class="cal-log" id="calLog"></div>
       </div>
       <p class="note"><b>weight = choice × time-left ÷ time-total</b> — the
       <a href="https://claude.ai/code/artifact/60d625fc-1336-4cd2-a278-e60c7ce5fdd9">matrix
-      selection equation</a> with reaction time as the multiplier. Lock fast and your
-      conviction lands at full strength; deliberate and it decays toward zero. Timeout
-      records <i>none</i> at 0.0 — hesitation is data too. The profile this writes
-      (decision speed, conviction, tension, hesitations) feeds the final report.</p>
+      selection equation</a> with reaction time as the multiplier. The first tap commits
+      instantly: tap fast and your conviction lands at full strength; deliberate and it
+      decays toward zero. Timeout records <i>none</i> at 0.0 — hesitation is data too.
+      The profile this writes (decision speed, conviction, tension, hesitations) feeds
+      the final report.</p>
     </div></details>
   </div>
 
@@ -498,12 +496,11 @@ document.querySelectorAll('button[data-copy]').forEach(function (btn) {
     bar: document.getElementById('calBar'),
     q: document.getElementById('calQ'),
     choices: document.getElementById('calChoices'),
-    lock: document.getElementById('calLock'),
     start: document.getElementById('calStart'),
     log: document.getElementById('calLog')
   };
   if (!el.start) return;
-  var i = -1, left = T, deadline = 0, timer = null, picked = null, results = [];
+  var i = -1, left = T, deadline = 0, timer = null, results = [];
 
   function fmt(n) { return n.toFixed(1); }
   function render() {
@@ -527,24 +524,24 @@ document.querySelectorAll('button[data-copy]').forEach(function (btn) {
   function next() {
     i++;
     if (i >= QS.length) return finish();
-    picked = null; left = T; deadline = performance.now() + T * 1000;
+    left = T; deadline = performance.now() + T * 1000;
     el.step.textContent = 'call ' + (i + 1) + '/' + QS.length;
     el.q.textContent = QS[i];
-    el.lock.disabled = true;
     Array.prototype.forEach.call(el.choices.children, function (b) { b.classList.remove('sel'); });
     render();
     timer = setInterval(tick, 100);
   }
-  function lockIn() {
-    if (!timer || picked === null) return;
-    sync(); // lock against wall-clock time, not the last rendered tick
-    if (left <= 0) return; // buzzer beat the lock — timedOut will handle it
+  function commit(v, btn) {
+    if (!timer) return;
+    sync(); // score against wall-clock time, not the last rendered tick
+    if (left <= 0) return; // buzzer beat the tap — timedOut handles it
     stopTimer();
+    btn.classList.add('sel'); // brief flash of what you tapped
     var f = left / T; // time factor: 1.0 instant → 0.0 buzzer
-    var label = picked === 'B' ? 'both' : picked === '2' ? '++' : picked === '-2' ? '−−' : 'none';
-    var wtxt = picked === 'B' ? '±' + fmt(2 * f)
-             : picked === '0' ? '0.0'
-             : (picked === '2' ? '+' : '−') + fmt(2 * f);
+    var label = v === 'B' ? 'both' : v === '2' ? '++' : v === '-2' ? '−−' : 'none';
+    var wtxt = v === 'B' ? '±' + fmt(2 * f)
+             : v === '0' ? '0.0'
+             : (v === '2' ? '+' : '−') + fmt(2 * f);
     results.push({ label: label, f: f });
     logLine('call ' + (i + 1) + ': <span class="a">' + label + '</span> @ ' + fmt(left) + 's left → weight ' + wtxt);
     setTimeout(next, 450);
@@ -558,7 +555,7 @@ document.querySelectorAll('button[data-copy]').forEach(function (btn) {
   function finish() {
     el.step.textContent = 'profile';
     el.q.textContent = 'Done. Your reactions — not your reasoning — just wrote this:';
-    el.choices.hidden = true; el.lock.hidden = true;
+    el.choices.hidden = true;
     var n = results.length;
     var speed = results.reduce(function (s, r) { return s + r.f; }, 0) / n;
     var conv = results.reduce(function (s, r) { return s + (r.label === 'none' || r.label === 'timeout' ? 0 : r.f); }, 0) / n;
@@ -573,19 +570,12 @@ document.querySelectorAll('button[data-copy]').forEach(function (btn) {
 
   el.start.addEventListener('click', function () {
     results = []; i = -1; el.log.innerHTML = '';
-    el.start.hidden = true; el.choices.hidden = false; el.lock.hidden = false;
+    el.start.hidden = true; el.choices.hidden = false;
     next();
   });
   Array.prototype.forEach.call(el.choices.children, function (b) {
-    b.addEventListener('click', function () {
-      if (!timer) return;
-      picked = b.dataset.v;
-      Array.prototype.forEach.call(el.choices.children, function (x) { x.classList.remove('sel'); });
-      b.classList.add('sel');
-      el.lock.disabled = false;
-    });
+    b.addEventListener('click', function () { commit(b.dataset.v, b); });
   });
-  el.lock.addEventListener('click', lockIn);
 })();
 </script>
 
